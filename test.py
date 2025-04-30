@@ -1,46 +1,45 @@
-import soundfile as sf
-import sounddevice as sd
 import json
-import numpy as np
 import time
-import threading
+import numpy as np
+import sounddevice as sd
+import pygame
 
-# Cargar las notas
-with open('notes_detected.json', 'r') as f:
+# --- Generar tono para notas ---
+def generate_tone(frequency, duration, sample_rate=44100):
+    t = np.linspace(0, duration, int(sample_rate * duration), False)
+    tone = 0.3 * np.sin(2 * np.pi * frequency * t)
+    return tone.astype(np.float32)
+
+# --- Colores por ID ---
+colors = {
+    "red": ('\033[91m', '🟥'),  # rojo
+    "yellow": ('\033[93m', '🟨'),  # amarillo
+    "green": ('\033[92m', '🟩'),  # verde
+    "blue": ('\033[94m', '🟦')   # azul
+}
+RESET = '\033[0m'
+
+# --- Cargar notas desde JSON ---
+with open('notas_guitarra.json') as f:
     notes = json.load(f)
 
+# --- Reproducir canción ---
+pygame.mixer.init()
+pygame.mixer.music.load("SHE IS A YAQUI LADY.mp3")
+pygame.mixer.music.set_volume(0.2)
+pygame.mixer.music.play()
 
-def generate_tone(frequency, duration, samplerate=44100):
-    t = np.linspace(0, duration, int(samplerate * duration), endpoint=False)
-    tone = 0.5 * np.sin(2 * np.pi * frequency * t)  # 0.5 para no saturar el volumen
-    return tone
-
-# Función para reproducir la canción de fondo
-def play_background_music():
-    # Cargar archivo de música de fondo
-    music_data, music_samplerate = sf.read('SHE IS A YAQUI LADY.mp3')
-    
-    # Reproducir la canción de fondo a un volumen bajo
-    while True:
-        sd.play(music_data * 0.1, music_samplerate)  # Multiplicar por 0.1 para bajarlo de volumen
-        sd.wait()
-
-print("🎵 ¡Empieza la canción! 🎵")
-
-
-background_thread = threading.Thread(target=play_background_music, daemon=True)
-background_thread.start()
+# --- Iniciar cronómetro ---
 start_time = time.time()
 
+# --- Reproducir notas sincronizadas ---
 for note in notes:
     while (time.time() - start_time) < note['time_seconds']:
         time.sleep(0.001)
 
-    tone = generate_tone(440, 0.001)  # Duración de 0.5 segundos
-    sd.play(tone, 44100)
+    note_id = note['id']
 
-    print(f"🎸 Nota {note['id']} - {note['time_seconds']}s")
-    
-    sd.wait()  # Esperar a que termine de sonar antes de seguir
+    color_code, emoji = colors[note['color']]
+    print(f"{color_code}{emoji} Nota {note['color']} - {note['time_seconds']}s{RESET}")
 
-print("✅ ¡Todas las notas ejecutadas!")
+print("✅ Prueba terminada")
